@@ -4,14 +4,12 @@ import json
 import re
 import tempfile
 import urllib.request
-
+from skyfield.api import load
 from mastodon import Mastodon
-import feedparser
 
+kernel = load('de421.bsp')
+timescale = load.timescale(builtin=True)
 
-FEED_URL = 'https://de.wikipedia.org/w/api.php?action=featuredfeed&feed=onthisday&feedformat=atom'
-CACHE_FILE = "/tmp/wikibot.cache"
-WIKIPEDIA_PREFIX = "https://de.wikipedia.org"
 
 # A simple toot schedule, telling the bot at which hour of
 # the day it should toot about which feed item entry.
@@ -23,6 +21,16 @@ TOOT_SCHEDULE = {
     14: 3,
     16: 4
 }
+
+PLANETS = [
+    "mercury",
+    "venus",
+    "mars",
+    "jupiter barycenter",
+    "saturn barycenter",
+    "uranus barycenter",
+    "neptune barycenter"
+]
 
 def parse_date_from_timestamp(timestamp):
     """ Parses a date object from a feed timestamp"""
@@ -175,37 +183,37 @@ def create_media_post(entry, mastodon):
         # create media post
         return mastodon.media_post(image_filename, description=entry["image"]["alt_text"])
 
+def distance_to_earth(planet, time=None):
+    if time is None:
+        time = timescale.now()
+
+    return kernel["earth"].at(time).observe(kernel[planet]).radec()[2].au
+
+
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description='Toot about events on this day')
+    parser = argparse.ArgumentParser(description='Toot about the configuration of the solar system')
     parser.add_argument('--dry-run', action="store_true", help="If given only prints the content of the toot")
-    parser.add_argument(
-        '--item', type=int,
-        help="Selects the feed item to be processed. If not given item is selected according to schedule."
-    )
-    parser.add_argument('access_token', type=str, help='access token for the targeted Mastodon account.')
+    # parser.add_argument('access_token', type=str, help='access token for the targeted Mastodon account.')
 
     args = parser.parse_args()
-    feed_item = get_feed_entry_for_today()
+    now = datetime.datetime.now(tz=datetime.timezone.utc)
+    next_hour = datetime.datetime.now(tz=datetime.timezone.utc) + datetime.timedelta(hours=1)
+    for planet in PLANETS:
+        print(planet, distance_to_earth(planet, time=timescale.utc(now)))
+        print(planet, distance_to_earth(planet, time=timescale.utc(next_hour)))
 
-    entries = parse_feed_item(feed_item)
-
-    item = args.item
-    if item is None:
-        hour_of_day = datetime.datetime.now().hour
-        item = TOOT_SCHEDULE.get(hour_of_day, None)
-
-    if item is not None:
-        entry = entries[item]
-        toot_text = prepare_toot(entry)
-        if args.dry_run:
-            print(toot_text)
-        else:
-            mastodon = Mastodon(
-                api_base_url = 'https://chaos.social',
-                access_token=args.access_token
-            )
-            media_dict = create_media_post(entry, mastodon)
-            mastodon.status_post(toot_text, visibility="unlisted", media_ids=media_dict)
-            print("{0}: Successfully tooted!".format(datetime.datetime.now().isoformat()))
-    else:
-        print("{0}: Nothing to toot about.".format(datetime.datetime.now().isoformat()))
+    # if item is not None:
+    #     entry = entries[item]
+    #     toot_text = prepare_toot(entry)
+    #     if args.dry_run:
+    #         print(toot_text)
+    #     else:
+    #         mastodon = Mastodon(
+    #             api_base_url = 'https://chaos.social',
+    #             access_token=args.access_token
+    #         )
+    #         media_dict = create_media_post(entry, mastodon)
+    #         mastodon.status_post(toot_text, visibility="unlisted", media_ids=media_dict)
+    #         print("{0}: Successfully tooted!".format(datetime.datetime.now().isoformat()))
+    # else:
+    #     print("{0}: Nothing to toot about.".format(datetime.datetime.now().isoformat()))

@@ -1,3 +1,2 @@
-beautifulsoup4
 Mastodon.py
-feedparser
+skyfield
