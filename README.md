@@ -1,7 +1,7 @@
-# wikibot.py Wikipedia Bot for Mastodon
+# Solar System bot for Mastodon
 
-This is a simple bot for mastodon, which posts the content of Wikipedia's "on this day" feed during the day.
+This is a simple bot for mastodon, which posts the current distance of planets to Earth.
 
-Follow it at https://chaos.social/@Wikibot (It currently only speaks German)
+Follow it at https://chaos.social/@SolarSystemConfig
 
 Bug reports and feature requests welcome!
